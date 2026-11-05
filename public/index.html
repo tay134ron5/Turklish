@@ -36,6 +36,18 @@
     .user img { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--accent-2); }
     .welcome { padding: 6px 14px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); white-space: nowrap; }
     .welcome strong { background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .plan-badge {
+      display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px;
+      font-size: .75rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap;
+      color: var(--muted); background: var(--panel); border: 1px solid var(--line); transition: all .2s;
+    }
+    .plan-badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .plan-badge.loading { opacity: .5; }
+    .plan-badge.premium {
+      color: #fff; border-color: transparent; background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 0 18px rgba(249,115,22,.35);
+    }
+    .plan-badge.premium::before { content: "★"; width: auto; height: auto; background: none; }
     .user a { color: var(--muted); text-decoration: none; }
     .user a:hover { color: var(--text); }
 
@@ -97,6 +109,7 @@
         <div class="user" id="user" hidden>
           <img id="user-pic" alt="" referrerpolicy="no-referrer">
           <span class="welcome">Hoş geldin, <strong id="user-name"></strong> 👋</span>
+          <span class="plan-badge loading" id="user-plan">…</span>
           <a href="#" id="logout">Çıkış</a>
         </div>
       </div>
@@ -135,7 +148,25 @@
 
   <footer>© Turklish — Ücretsiz çeviri motoru</footer>
 
-  <script>
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+    import { getAuth, GoogleAuthProvider, signInWithCredential, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+    // Firebase web config is public by design; access is enforced by Firestore security rules (firestore.rules).
+    const firebaseConfig = {
+      apiKey: 'AIzaSyA7wCEG2OTSdJVb8H6OWPCRkciGgz-amAM',
+      authDomain: 'turklish-fd46e.firebaseapp.com',
+      projectId: 'turklish-fd46e',
+      storageBucket: 'turklish-fd46e.firebasestorage.app',
+      messagingSenderId: '196606156645',
+      appId: '1:196606156645:web:35db1bcf2d28f59172cb8c',
+      measurementId: 'G-DFQ82SVRQY',
+    };
+    const firebaseApp = initializeApp(firebaseConfig);
+    const auth = getAuth(firebaseApp);
+    const db = getFirestore(firebaseApp);
+
     const $ = (id) => document.getElementById(id);
     $('go').onclick = async () => {
       const text = $('text').value.trim();
@@ -184,11 +215,35 @@
       }
     };
 
-    function handleCredentialResponse(response) {
+    const showPlan = (plan) => {
+      const badge = $('user-plan');
+      badge.className = 'plan-badge' + (plan === 'Premium' ? ' premium' : plan ? '' : ' loading');
+      badge.textContent = plan || '…';
+    };
+
+    // Returns the user's plan, creating their users/{email} document on first login.
+    const getOrCreatePlan = async ({ email, displayName }) => {
+      const ref = doc(db, 'users', email);
+      const snap = await getDoc(ref);
+      if (snap.exists()) return snap.data().plan || 'Standard';
+      await setDoc(ref, { name: displayName || email, email, plan: 'Standard', createdAt: serverTimestamp() });
+      return 'Standard';
+    };
+
+    async function handleCredentialResponse(response) {
       showUser(decodeJwt(response.credential));
+      showPlan(null);
+      try {
+        // Exchange the Google ID token for a Firebase session so Firestore rules can verify the user.
+        const { user } = await signInWithCredential(auth, GoogleAuthProvider.credential(response.credential));
+        showPlan(await getOrCreatePlan(user));
+      } catch (err) {
+        console.error('Firebase login/plan lookup failed:', err);
+        showPlan('Standard');
+      }
     }
 
-    window.onGoogleLibraryLoad = () => {
+    const initGoogle = () => {
       google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
         callback: handleCredentialResponse,
@@ -201,8 +256,13 @@
     $('logout').onclick = (e) => {
       e.preventDefault();
       google.accounts.id.disableAutoSelect();
+      signOut(auth);
       showUser(null);
     };
+
+    // Module scripts run deferred, so the GSI library may already be loaded by now.
+    if (window.google?.accounts?.id) initGoogle();
+    else window.onGoogleLibraryLoad = initGoogle;
   </script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </body>
