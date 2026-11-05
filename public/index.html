@@ -1,40 +1,125 @@
 <!doctype html>
-<html lang="en">
+<html lang="tr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Turklish</title>
+  <title>Turklish — Ücretsiz Çeviri Motoru</title>
+  <meta name="description" content="Ücretsiz, limitsiz ve hızlı çeviri motoru. İngilizce, Türkçe ve Rusça.">
   <style>
+    :root {
+      --bg: #0b0d12; --panel: #141821; --line: #262c3a; --text: #e8eaf0; --muted: #8b93a7;
+      --accent: #e11d48; --accent-2: #f97316; --radius: 14px;
+    }
     * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f4f5f7; font: 16px/1.5 system-ui, sans-serif; color: #1f2328; }
-    main { width: min(560px, 100% - 32px); background: #fff; padding: 28px; border-radius: 14px; box-shadow: 0 4px 24px rgba(0,0,0,.06); }
-    h1 { margin: 0 0 20px; font-size: 1.5rem; }
-    textarea, select, button { font: inherit; border-radius: 8px; border: 1px solid #d0d7de; padding: 10px 12px; }
-    textarea { width: 100%; min-height: 120px; resize: vertical; }
-    .row { display: flex; gap: 10px; align-items: center; margin: 12px 0; }
-    .row select { flex: 1; }
-    button { background: #c8102e; color: #fff; border: 0; cursor: pointer; padding: 10px 20px; }
-    button:disabled { opacity: .6; cursor: wait; }
-    #result { min-height: 60px; padding: 12px; background: #f6f8fa; border-radius: 8px; white-space: pre-wrap; }
-    #result.error { color: #c8102e; }
+    body {
+      margin: 0; min-height: 100vh; color: var(--text); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: radial-gradient(900px 500px at 85% -10%, rgba(225,29,72,.18), transparent 60%),
+                  radial-gradient(700px 400px at -10% 110%, rgba(249,115,22,.12), transparent 60%), var(--bg);
+    }
+    .wrap { width: min(1120px, 100% - 32px); margin: 0 auto; }
+
+    header { display: flex; align-items: center; justify-content: space-between; padding: 22px 0; }
+    .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 1.25rem; letter-spacing: -.01em; }
+    .logo-slot {
+      width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; overflow: hidden;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2)); font-weight: 800;
+    }
+    #logo { width: 100%; height: 100%; object-fit: cover; }
+    #logo:not([src]) { display: none; }
+    #logo:not([src]) + span { display: block; } /* "T" fallback until a logo src is set */
+    .logo-slot span { display: none; }
+    .badge { font-size: .8rem; color: var(--muted); border: 1px solid var(--line); padding: 6px 12px; border-radius: 999px; }
+
+    .hero { display: grid; grid-template-columns: 1fr 1.1fr; gap: 56px; align-items: center; padding: 48px 0 72px; }
+    .eyebrow { color: var(--accent-2); font-weight: 600; font-size: .85rem; text-transform: uppercase; letter-spacing: .08em; }
+    h1 { font-size: clamp(2rem, 4.5vw, 3.2rem); line-height: 1.1; margin: 12px 0 16px; letter-spacing: -.02em; }
+    h1 em { font-style: normal; background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .lead { color: var(--muted); font-size: 1.1rem; margin: 0 0 28px; max-width: 46ch; }
+    .features { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+    .features li { display: flex; gap: 10px; align-items: center; }
+    .features li::before { content: "✓"; color: var(--accent-2); font-weight: 700; }
+
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; box-shadow: 0 20px 60px rgba(0,0,0,.4); }
+    .langs { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }
+    .langs span { color: var(--muted); }
+    select, textarea, button { font: inherit; color: inherit; border-radius: 10px; }
+    select { flex: 1; background: var(--bg); border: 1px solid var(--line); padding: 10px 12px; }
+    textarea {
+      width: 100%; min-height: 140px; resize: vertical; background: var(--bg); border: 1px solid var(--line); padding: 14px;
+    }
+    select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+    .actions { display: flex; justify-content: space-between; align-items: center; margin: 12px 0; gap: 12px; }
+    .hint { color: var(--muted); font-size: .85rem; }
+    kbd { border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; font-size: .8rem; }
+    button {
+      border: 0; cursor: pointer; padding: 11px 26px; font-weight: 600; color: #fff;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2)); transition: transform .15s, opacity .15s;
+    }
+    button:hover { transform: translateY(-1px); }
+    button:disabled { opacity: .6; cursor: wait; transform: none; }
+    #result {
+      min-height: 100px; padding: 14px; border-radius: 10px; white-space: pre-wrap; border: 1px dashed var(--line);
+      background: rgba(255,255,255,.02);
+    }
+    #result:empty::before { content: "Çeviri burada görünecek..."; color: var(--muted); }
+    #result.error { color: #fb7185; border-color: #fb7185; }
+
+    footer { border-top: 1px solid var(--line); padding: 24px 0; color: var(--muted); font-size: .85rem; text-align: center; }
+
+    @media (max-width: 860px) {
+      .hero { grid-template-columns: 1fr; gap: 32px; padding: 24px 0 48px; }
+    }
+    @media (max-width: 480px) {
+      .badge, .hint { display: none; }
+      .actions { justify-content: flex-end; }
+      button { width: 100%; }
+    }
   </style>
 </head>
 <body>
-  <main>
-    <h1>Turklish</h1>
-    <textarea id="text" placeholder="Enter text to translate..."></textarea>
-    <div class="row">
-      <select id="source" aria-label="Source language">
-        <option value="en">English</option><option value="tr">Türkçe</option><option value="ru">Русский</option>
-      </select>
-      <span>→</span>
-      <select id="target" aria-label="Target language">
-        <option value="en">English</option><option value="tr" selected>Türkçe</option><option value="ru">Русский</option>
-      </select>
-      <button id="go">Translate</button>
-    </div>
-    <div id="result"></div>
-  </main>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo-slot"><img id="logo" alt="Turklish Logo"><span>T</span></div>
+        Turklish
+      </div>
+      <span class="badge">EN · TR · RU</span>
+    </header>
+
+    <main class="hero">
+      <section>
+        <div class="eyebrow">Çeviri Motoru</div>
+        <h1>Ücretsiz, Limitsiz ve <em>Hızlı</em> Çeviri.</h1>
+        <p class="lead">API ücretlerine son. Metninizi yazın, dili seçin ve saniyeler içinde çevirin. Kayıt yok, kart yok.</p>
+        <ul class="features">
+          <li>İngilizce, Türkçe ve Rusça arasında çeviri</li>
+          <li>Üyelik veya API anahtarı gerekmez</li>
+          <li>Enter tuşuyla anında çeviri</li>
+        </ul>
+      </section>
+
+      <section class="card" aria-label="Çevirmen">
+        <div class="langs">
+          <select id="source" aria-label="Kaynak dil">
+            <option value="en">English</option><option value="tr">Türkçe</option><option value="ru">Русский</option>
+          </select>
+          <span>→</span>
+          <select id="target" aria-label="Hedef dil">
+            <option value="en">English</option><option value="tr" selected>Türkçe</option><option value="ru">Русский</option>
+          </select>
+        </div>
+        <textarea id="text" placeholder="Çevrilecek metni yazın..."></textarea>
+        <div class="actions">
+          <span class="hint"><kbd>Enter</kbd> çevir · <kbd>Shift</kbd>+<kbd>Enter</kbd> yeni satır</span>
+          <button id="go">Çevir</button>
+        </div>
+        <div id="result" aria-live="polite"></div>
+      </section>
+    </main>
+  </div>
+
+  <footer>© Turklish — Ücretsiz çeviri motoru</footer>
+
   <script>
     const $ = (id) => document.getElementById(id);
     $('go').onclick = async () => {
@@ -42,7 +127,7 @@
       if (!text) return;
       $('go').disabled = true;
       $('result').className = '';
-      $('result').textContent = 'Translating...';
+      $('result').textContent = 'Çevriliyor...';
       try {
         const res = await fetch('/api/translate', {
           method: 'POST',
@@ -50,7 +135,7 @@
           body: JSON.stringify({ text, sourceLang: $('source').value, targetLang: $('target').value }),
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Request failed');
+        if (!res.ok) throw new Error(data.error || 'İstek başarısız oldu');
         $('result').textContent = data.translatedText;
       } catch (err) {
         $('result').className = 'error';
