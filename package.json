@@ -1,0 +1,16 @@
+{
+  "name": "turklish",
+  "version": "1.0.0",
+  "description": "English-Turkish translation API",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.3.0",
+    "google-translate-api-x": "^10.7.3"
+  }
+}
