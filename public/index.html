@@ -32,6 +32,9 @@
     .badge { font-size: .8rem; color: var(--muted); border: 1px solid var(--line); padding: 6px 12px; border-radius: 999px; }
     .auth { display: flex; align-items: center; gap: 12px; }
     #gsi-button { min-height: 40px; }
+    /* Until Firebase has restored (or ruled out) a saved session, don't flash the sign-in button.
+       visibility (not display) so Google can still lay the button out. */
+    .auth.pending #gsi-button { visibility: hidden; }
     .user { display: flex; align-items: center; gap: 10px; font-size: .9rem; }
     .user[hidden] { display: none; }
     .user img { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--accent-2); }
@@ -248,7 +251,7 @@
         <div class="logo-slot"><img id="logo" alt="Turklish Logo"><span>T</span></div>
         Turklish
       </div>
-      <div class="auth">
+      <div class="auth pending" id="auth">
         <button type="button" class="lang-badge" id="lang-badge" aria-haspopup="dialog">🌍 10 Dil Desteği</button>
         <button type="button" class="premium-btn" id="premium-btn"><span class="spark" aria-hidden="true">✦</span>Premium'a Geç</button>
         <div id="gsi-button"></div>
@@ -556,6 +559,8 @@
     // Single source of truth for the signed-in state. Fires on page load (restoring a persisted
     // session after refresh), after Google sign-in, and after sign-out.
     onAuthStateChanged(auth, async (user) => {
+      console.info('[auth] state:', user ? `signed in as ${user.email}` : 'signed out');
+      $('auth').classList.remove('pending');
       if (!user) {
         stopHistory();
         showUser(null);
@@ -580,8 +585,10 @@
         // Exchange the Google ID token for a Firebase session; onAuthStateChanged takes it from here.
         await signInWithCredential(auth, GoogleAuthProvider.credential(response.credential));
       } catch (err) {
-        console.error('Firebase login failed:', err);
-        showToast('Giriş başarısız', 'Lütfen tekrar deneyin.');
+        // Most common cause: auth/invalid-credential because GOOGLE_CLIENT_ID is from a different
+        // Google Cloud project than Firebase and isn't allow-listed in Firebase Auth → Google provider.
+        console.error('[auth] Firebase signInWithCredential failed:', err.code, err.message);
+        showToast('Giriş başarısız', err.code || 'Lütfen tekrar deneyin.');
       }
     }
 
