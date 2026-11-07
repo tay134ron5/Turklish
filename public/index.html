@@ -32,6 +32,7 @@
     .badge { font-size: .8rem; color: var(--muted); border: 1px solid var(--line); padding: 6px 12px; border-radius: 999px; }
     .auth { display: flex; align-items: center; gap: 12px; }
     #gsi-button { min-height: 40px; }
+    #gsi-button[hidden] { display: none !important; }
     /* Until Firebase has restored (or ruled out) a saved session, don't flash the sign-in button.
        visibility (not display) so Google can still lay the button out. */
     .auth.pending #gsi-button { visibility: hidden; }
@@ -203,7 +204,7 @@
     }
     .h-meta code + span + code { color: var(--neon-orange); background: rgba(255,106,0,.12); }
     .h-meta time { margin-left: auto; white-space: nowrap; }
-    .h-src, .h-dst { margin: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+    .h-src, .h-dst { margin: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
     .h-src { color: var(--muted); font-size: .9rem; }
     .h-dst { font-weight: 600; }
     .h-star {
