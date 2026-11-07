@@ -7,6 +7,13 @@ const historyRoutes = require('./routes/history.routes');
 
 const app = express();
 
+// Google Identity Services popups need to postMessage back to this page.
+// "same-origin" would sever that link; "same-origin-allow-popups" keeps isolation but allows our popups.
+app.use((_req, res, next) => {
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  next();
+});
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));
 

@@ -4,11 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Turklish — Ücretsiz Çeviri Motoru</title>
-  <meta name="description" content="Ücretsiz, limitsiz ve hızlı çeviri motoru. İngilizce, Türkçe ve Rusça.">
+  <meta name="description" content="Ücretsiz, limitsiz ve hızlı çeviri motoru. Türkçe, İngilizce, Rusça, Almanca, İspanyolca, Fransızca, Arapça ve Makedonca.">
   <style>
     :root {
       --bg: #0b0d12; --panel: #141821; --line: #262c3a; --text: #e8eaf0; --muted: #8b93a7;
       --accent: #e11d48; --accent-2: #f97316; --radius: 14px;
+      --electric: #00b4ff; --neon-orange: #ff6a00;
     }
     * { box-sizing: border-box; }
     body {
@@ -48,6 +49,43 @@
       box-shadow: 0 0 18px rgba(249,115,22,.35);
     }
     .plan-badge.premium::before { content: "★"; width: auto; height: auto; background: none; }
+    /* Premium upsell: electric blue → neon orange with an animated glow */
+    .premium-btn {
+      position: relative; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+      padding: 9px 18px; border-radius: 999px; font-size: .9rem; font-weight: 700; letter-spacing: .01em;
+      background: linear-gradient(110deg, var(--electric), #6d5cff 50%, var(--neon-orange));
+      background-size: 200% 100%;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.08) inset, 0 0 18px rgba(0,180,255,.45), 0 0 28px rgba(255,106,0,.25);
+      animation: premium-glow 3.5s ease-in-out infinite;
+      transition: transform .15s, box-shadow .2s, background-position .4s;
+    }
+    .premium-btn:hover {
+      background-position: 100% 0; transform: translateY(-1px);
+      box-shadow: 0 0 0 1px rgba(255,255,255,.15) inset, 0 0 24px rgba(0,180,255,.6), 0 0 36px rgba(255,106,0,.45);
+    }
+    .premium-btn:focus-visible { outline: 2px solid var(--electric); outline-offset: 3px; }
+    .premium-btn .spark { font-size: 1rem; line-height: 1; filter: drop-shadow(0 0 4px #fff); }
+    .premium-btn[hidden] { display: none; }
+    @keyframes premium-glow {
+      0%, 100% { box-shadow: 0 0 0 1px rgba(255,255,255,.08) inset, 0 0 14px rgba(0,180,255,.4), 0 0 22px rgba(255,106,0,.2); }
+      50% { box-shadow: 0 0 0 1px rgba(255,255,255,.08) inset, 0 0 22px rgba(0,180,255,.55), 0 0 34px rgba(255,106,0,.4); }
+    }
+    @media (prefers-reduced-motion: reduce) { .premium-btn { animation: none; } }
+
+    .toast {
+      position: fixed; left: 50%; bottom: 28px; z-index: 50; transform: translate(-50%, 16px);
+      display: flex; align-items: center; gap: 10px; max-width: calc(100% - 32px);
+      padding: 12px 20px; border-radius: 12px; font-weight: 600; color: var(--text);
+      background: rgba(20,24,33,.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      border: 1px solid transparent;
+      background-image: linear-gradient(rgba(20,24,33,.95), rgba(20,24,33,.95)), linear-gradient(110deg, var(--electric), var(--neon-orange));
+      background-origin: border-box; background-clip: padding-box, border-box;
+      box-shadow: 0 10px 40px rgba(0,0,0,.5), 0 0 24px rgba(0,180,255,.25);
+      opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .toast small { display: block; font-weight: 400; color: var(--muted); }
+
     .user a { color: var(--muted); text-decoration: none; }
     .user a:hover { color: var(--text); }
 
@@ -90,8 +128,13 @@
     @media (max-width: 860px) {
       .hero { grid-template-columns: 1fr; gap: 32px; padding: 24px 0 48px; }
     }
+    @media (max-width: 860px) {
+      header { flex-wrap: wrap; gap: 12px; }
+      .auth { flex-wrap: wrap; justify-content: flex-end; }
+    }
     @media (max-width: 480px) {
       .badge, .user img { display: none; }
+      .premium-btn { padding: 8px 14px; font-size: .85rem; }
       #go { width: 100%; }
     }
   </style>
@@ -104,7 +147,8 @@
         Turklish
       </div>
       <div class="auth">
-        <span class="badge">EN · TR · RU</span>
+        <span class="badge">8 Dil</span>
+        <button type="button" class="premium-btn" id="premium-btn"><span class="spark" aria-hidden="true">✦</span>Premium'a Geç</button>
         <div id="gsi-button"></div>
         <div class="user" id="user" hidden>
           <img id="user-pic" alt="" referrerpolicy="no-referrer">
@@ -121,7 +165,7 @@
         <h1>Ücretsiz, Limitsiz ve <em>Hızlı</em> Çeviri.</h1>
         <p class="lead">API ücretlerine son. Metninizi yazın, dili seçin ve saniyeler içinde çevirin.</p>
         <ul class="features">
-          <li>İngilizce, Türkçe ve Rusça arasında çeviri</li>
+          <li>Türkçe, İngilizce, Rusça, Almanca, İspanyolca, Fransızca, Arapça ve Makedonca</li>
           <li>Üyelik veya API anahtarı gerekmez</li>
           <li class="soon">⏳ Premium yakında</li>
         </ul>
@@ -131,20 +175,26 @@
         <div class="langs">
           <select id="source" aria-label="Kaynak dil">
             <option value="en">English</option><option value="tr">Türkçe</option><option value="ru">Русский</option>
+            <option value="de">Deutsch</option><option value="es">Español</option><option value="fr">Français</option>
+            <option value="ar">العربية</option><option value="mk">Македонски</option>
           </select>
           <span>→</span>
           <select id="target" aria-label="Hedef dil">
             <option value="en">English</option><option value="tr" selected>Türkçe</option><option value="ru">Русский</option>
+            <option value="de">Deutsch</option><option value="es">Español</option><option value="fr">Français</option>
+            <option value="ar">العربية</option><option value="mk">Македонски</option>
           </select>
         </div>
-        <textarea id="text" placeholder="Çevrilecek metni yazın..."></textarea>
+        <textarea id="text" dir="auto" placeholder="Çevrilecek metni yazın..."></textarea>
         <div class="actions">
           <button id="go">Çevir</button>
         </div>
-        <div id="result" aria-live="polite"></div>
+        <div id="result" dir="auto" aria-live="polite"></div>
       </section>
     </main>
   </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <footer>© Turklish — Ücretsiz çeviri motoru</footer>
 
@@ -197,6 +247,19 @@
       }
     });
 
+    // --- Toast + Premium (placeholder until payments exist) ---
+    let toastTimer;
+    const showToast = (title, detail) => {
+      const t = $('toast');
+      t.innerHTML = '<span aria-hidden="true">🚀</span><div></div>';
+      t.querySelector('div').textContent = title;
+      if (detail) t.querySelector('div').appendChild(Object.assign(document.createElement('small'), { textContent: detail }));
+      t.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+    };
+    $('premium-btn').onclick = () => showToast('Çok Yakında!', 'Premium özellikler üzerinde çalışıyoruz.');
+
     // --- Google Sign-In (Google Identity Services) ---
     const GOOGLE_CLIENT_ID = '74121149233-1g4tjqf0psol6cs02b97jk2qt1ulo67g.apps.googleusercontent.com';
 
@@ -219,6 +282,7 @@
       const badge = $('user-plan');
       badge.className = 'plan-badge' + (plan === 'Premium' ? ' premium' : plan ? '' : ' loading');
       badge.textContent = plan || '…';
+      $('premium-btn').hidden = plan === 'Premium'; // no upsell for users who already have it
     };
 
     // Returns the user's plan, creating their users/{email} document on first login.
@@ -258,6 +322,7 @@
       google.accounts.id.disableAutoSelect();
       signOut(auth);
       showUser(null);
+      $('premium-btn').hidden = false;
     };
 
     // Module scripts run deferred, so the GSI library may already be loaded by now.
