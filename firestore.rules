@@ -16,6 +16,38 @@ service cloud.firestore {
 
       // Plan changes happen only server-side (Admin SDK / console), which bypasses these rules.
       allow update, delete: if false;
+
+      // users/{email}/history/{entryId}: translation history.
+      match /history/{entryId} {
+        function isOwner() {
+          return request.auth != null && request.auth.token.email == email;
+        }
+        function isPremium() {
+          return get(/databases/$(database)/documents/users/$(email)).data.plan == 'Premium';
+        }
+
+        // Standard users may only list their 3 most recent entries; Premium users get everything.
+        // (Keep the 3 in sync with STANDARD_HISTORY_LIMIT in public/index.html.)
+        allow list: if isOwner() && (request.query.limit <= 3 || isPremium());
+        allow get: if isOwner() && isPremium();
+
+        allow create: if isOwner()
+          && request.resource.data.keys().hasOnly(['sourceText', 'translatedText', 'sourceLang', 'targetLang', 'favorite', 'createdAt'])
+          && request.resource.data.keys().hasAll(['sourceText', 'translatedText', 'sourceLang', 'targetLang', 'favorite', 'createdAt'])
+          && request.resource.data.sourceText is string && request.resource.data.sourceText.size() <= 5000
+          && request.resource.data.translatedText is string && request.resource.data.translatedText.size() <= 10000
+          && request.resource.data.sourceLang is string && request.resource.data.sourceLang.size() <= 10
+          && request.resource.data.targetLang is string && request.resource.data.targetLang.size() <= 10
+          && request.resource.data.favorite == false
+          && request.resource.data.createdAt == request.time;
+
+        // Only Premium users can star/unstar, and only the 'favorite' field may change.
+        allow update: if isOwner() && isPremium()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['favorite'])
+          && request.resource.data.favorite is bool;
+
+        allow delete: if false;
+      }
     }
   }
 }

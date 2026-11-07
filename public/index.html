@@ -174,6 +174,57 @@
     @media (max-width: 400px) { .lang-list { grid-template-columns: 1fr; } }
     @media (prefers-reduced-motion: reduce) { .lang-modal[open], .lang-modal[open]::backdrop { animation: none; } }
 
+    /* --- Translation history ("Geçmiş Çeviriler") --- */
+    .history { padding: 0 0 64px; }
+    .history[hidden] { display: none; }
+    .history-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    .history-head h2 {
+      margin: 0; font-size: 1.3rem; letter-spacing: -.01em;
+      background: linear-gradient(90deg, var(--electric), var(--neon-orange)); -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .history-count { font-size: .8rem; color: var(--muted); border: 1px solid var(--line); padding: 4px 12px; border-radius: 999px; white-space: nowrap; }
+    .history-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+    .history-empty { color: var(--muted); padding: 22px; text-align: center; border: 1px dashed var(--line); border-radius: var(--radius); }
+    .h-item {
+      position: relative; display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 16px; border-radius: var(--radius);
+      background: var(--panel); border: 1px solid var(--line); transition: border-color .2s, box-shadow .2s, transform .15s;
+    }
+    .h-item:hover { border-color: rgba(0,180,255,.5); box-shadow: 0 0 18px rgba(0,180,255,.18); transform: translateY(-1px); }
+    .h-item.new { animation: h-in .45s ease-out; }
+    .h-item.fav { border-color: rgba(255,106,0,.55); box-shadow: 0 0 18px rgba(255,106,0,.18); }
+    @keyframes h-in { from { opacity: 0; transform: translateY(-8px); box-shadow: 0 0 28px rgba(0,180,255,.5); } to { opacity: 1; transform: none; } }
+    .h-meta { display: flex; align-items: center; gap: 8px; font-size: .78rem; color: var(--muted); padding-right: 34px; }
+    .h-meta code {
+      padding: 2px 6px; border-radius: 6px; font-size: .72rem; font-weight: 700; text-transform: uppercase;
+      color: var(--electric); background: rgba(0,180,255,.1);
+    }
+    .h-meta code + span + code { color: var(--neon-orange); background: rgba(255,106,0,.12); }
+    .h-meta time { margin-left: auto; white-space: nowrap; }
+    .h-src, .h-dst { margin: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+    .h-src { color: var(--muted); font-size: .9rem; }
+    .h-dst { font-weight: 600; }
+    .h-star {
+      position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; padding: 0; border-radius: 50%;
+      display: grid; place-items: center; font-size: 1rem; line-height: 1; color: var(--muted);
+      background: rgba(255,255,255,.04); border: 1px solid var(--line); transition: color .2s, border-color .2s, box-shadow .2s;
+    }
+    .h-star:hover { color: var(--neon-orange); border-color: var(--neon-orange); }
+    .h-star[aria-pressed="true"] { color: var(--neon-orange); border-color: var(--neon-orange); box-shadow: 0 0 12px rgba(255,106,0,.45); }
+    .h-star:focus-visible { outline: 2px solid var(--electric); outline-offset: 2px; }
+
+    /* Standard plan: blurred "ghost" items behind a lock overlay */
+    .history-lock { position: relative; margin-top: 14px; border-radius: var(--radius); overflow: hidden; }
+    .history-lock[hidden] { display: none; }
+    .history-lock .ghosts { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; filter: blur(6px); opacity: .45; pointer-events: none; user-select: none; }
+    .history-lock .ghosts div { height: 110px; border-radius: var(--radius); background: linear-gradient(135deg, rgba(0,180,255,.18), rgba(255,106,0,.14)); border: 1px solid var(--line); }
+    .lock-overlay {
+      position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+      padding: 16px; text-align: center; background: rgba(11,13,18,.35);
+    }
+    .lock-overlay strong { font-size: 1.05rem; }
+    .lock-overlay small { color: var(--muted); max-width: 42ch; }
+    @media (prefers-reduced-motion: reduce) { .h-item.new { animation: none; } }
+
     footer { border-top: 1px solid var(--line); padding: 24px 0; color: var(--muted); font-size: .85rem; text-align: center; }
 
     @media (max-width: 860px) {
@@ -245,6 +296,22 @@
         <div id="result" dir="auto" aria-live="polite"></div>
       </section>
     </main>
+
+    <section class="history" id="history" aria-labelledby="history-title" hidden>
+      <div class="history-head">
+        <h2 id="history-title">🕘 Geçmiş Çeviriler</h2>
+        <span class="history-count" id="history-count"></span>
+      </div>
+      <ul class="history-list" id="history-list"></ul>
+      <div class="history-lock" id="history-lock" hidden>
+        <div class="ghosts" aria-hidden="true"><div></div><div></div><div></div></div>
+        <div class="lock-overlay">
+          <strong>🔒 Ücretsiz plan limitine ulaştın</strong>
+          <small>Standart planda son 3 çevirini görebilirsin. Tüm geçmişin ve favorilerin için Premium'a geç.</small>
+          <button type="button" class="premium-btn" id="history-premium-btn"><span class="spark" aria-hidden="true">✦</span>Premium'a Geç</button>
+        </div>
+      </div>
+    </section>
   </div>
 
   <dialog class="lang-modal" id="lang-modal" aria-labelledby="lang-modal-title">
@@ -273,7 +340,9 @@
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
     import { getAuth, GoogleAuthProvider, signInWithCredential, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-    import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+    import {
+      getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, collection, query, orderBy, limit, onSnapshot, serverTimestamp,
+    } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
     // Firebase web config is public by design; access is enforced by Firestore security rules (firestore.rules).
     const firebaseConfig = {
@@ -305,6 +374,7 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'İstek başarısız oldu');
         $('result').textContent = data.translatedText;
+        saveHistory(text, data.translatedText, $('source').value, $('target').value); // fire-and-forget
       } catch (err) {
         $('result').className = 'error';
         $('result').textContent = err.message;
@@ -336,7 +406,118 @@
       clearTimeout(toastTimer);
       toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
     };
-    $('premium-btn').onclick = () => showToast('Çok Yakında!', 'Premium özellikler üzerinde çalışıyoruz.');
+    $('premium-btn').onclick = $('history-premium-btn').onclick =
+      () => showToast('Çok Yakında!', 'Premium özellikler üzerinde çalışıyoruz.');
+
+    // --- Translation history: users/{email}/history ---
+    const STANDARD_HISTORY_LIMIT = 3; // must match firestore.rules
+    // Keep in sync with the size limits in firestore.rules
+    const MAX_SOURCE_LEN = 5000, MAX_TRANSLATED_LEN = 10000;
+    let historyUnsub = null;
+    let historyPlan = null;
+    const seenHistoryIds = new Set();
+
+    const historyCol = (email) => collection(db, 'users', email, 'history');
+
+    async function saveHistory(sourceText, translatedText, sourceLang, targetLang) {
+      const user = auth.currentUser;
+      if (!user?.email || sourceText.length > MAX_SOURCE_LEN || translatedText.length > MAX_TRANSLATED_LEN) return;
+      try {
+        // The onSnapshot listener below picks this up immediately (local write), so no manual DOM update is needed.
+        await addDoc(historyCol(user.email), {
+          sourceText, translatedText, sourceLang, targetLang, favorite: false, createdAt: serverTimestamp(),
+        });
+      } catch (err) {
+        console.error('Failed to save translation history:', err);
+      }
+    }
+
+    const timeFmt = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+    const renderHistoryItem = (snap, isPremium) => {
+      // 'estimate' fills in a local time for writes the server hasn't timestamped yet.
+      const h = snap.data({ serverTimestamps: 'estimate' });
+      const li = document.createElement('li');
+      li.className = 'h-item' + (h.favorite ? ' fav' : '') + (seenHistoryIds.has(snap.id) ? '' : ' new');
+
+      const meta = document.createElement('div');
+      meta.className = 'h-meta';
+      const date = h.createdAt?.toDate();
+      meta.append(
+        Object.assign(document.createElement('code'), { textContent: h.sourceLang }),
+        Object.assign(document.createElement('span'), { textContent: '→' }),
+        Object.assign(document.createElement('code'), { textContent: h.targetLang }),
+        Object.assign(document.createElement('time'), {
+          textContent: date ? timeFmt.format(date) : '', dateTime: date ? date.toISOString() : '',
+        }),
+      );
+      li.append(
+        meta,
+        Object.assign(document.createElement('p'), { className: 'h-src', textContent: h.sourceText, dir: 'auto' }),
+        Object.assign(document.createElement('p'), { className: 'h-dst', textContent: h.translatedText, dir: 'auto' }),
+      );
+
+      if (isPremium) {
+        const star = Object.assign(document.createElement('button'), {
+          type: 'button', className: 'h-star', textContent: h.favorite ? '★' : '☆',
+          title: h.favorite ? 'Favorilerden çıkar' : 'Favorilere ekle',
+        });
+        star.setAttribute('aria-pressed', String(!!h.favorite));
+        star.setAttribute('aria-label', star.title);
+        star.onclick = () => updateDoc(snap.ref, { favorite: !h.favorite })
+          .catch((err) => { console.error('Favorite update failed:', err); showToast('Favori kaydedilemedi', 'Lütfen tekrar deneyin.'); });
+        li.append(star);
+      }
+      return li;
+    };
+
+    const stopHistory = () => {
+      historyUnsub?.();
+      historyUnsub = null;
+      historyPlan = null;
+      seenHistoryIds.clear();
+      $('history').hidden = true;
+      $('history-list').replaceChildren();
+    };
+
+    // Live listener: re-renders whenever a translation is added or starred, no page refresh needed.
+    const startHistory = (email, plan) => {
+      if (historyUnsub && historyPlan === plan) return;
+      stopHistory();
+      historyPlan = plan;
+      const isPremium = plan === 'Premium';
+      const q = isPremium
+        ? query(historyCol(email), orderBy('createdAt', 'desc'))
+        : query(historyCol(email), orderBy('createdAt', 'desc'), limit(STANDARD_HISTORY_LIMIT));
+      $('history').hidden = false;
+
+      let firstSnapshot = true;
+      historyUnsub = onSnapshot(q, (snap) => {
+        if (firstSnapshot) snap.docs.forEach((d) => seenHistoryIds.add(d.id)); // don't animate the initial load
+        firstSnapshot = false;
+
+        const list = $('history-list');
+        if (snap.empty) {
+          list.replaceChildren(Object.assign(document.createElement('li'), {
+            className: 'history-empty', textContent: 'Henüz çeviri yok. İlk çevirin burada görünecek ✨',
+          }));
+        } else {
+          list.replaceChildren(...snap.docs.map((d) => renderHistoryItem(d, isPremium)));
+          snap.docs.forEach((d) => seenHistoryIds.add(d.id));
+        }
+
+        const atLimit = !isPremium && snap.size >= STANDARD_HISTORY_LIMIT;
+        $('history-lock').hidden = !atLimit;
+        $('history-count').textContent = isPremium
+          ? `${snap.size} çeviri · ★ ${snap.docs.filter((d) => d.data().favorite).length}`
+          : `Son ${STANDARD_HISTORY_LIMIT} çeviri`;
+      }, (err) => {
+        console.error('History listener failed:', err);
+        $('history-list').replaceChildren(Object.assign(document.createElement('li'), {
+          className: 'history-empty', textContent: 'Geçmiş yüklenemedi.',
+        }));
+      });
+    };
 
     // --- Google Sign-In (Google Identity Services) ---
     const GOOGLE_CLIENT_ID = '74121149233-1g4tjqf0psol6cs02b97jk2qt1ulo67g.apps.googleusercontent.com';
@@ -378,7 +559,9 @@
       try {
         // Exchange the Google ID token for a Firebase session so Firestore rules can verify the user.
         const { user } = await signInWithCredential(auth, GoogleAuthProvider.credential(response.credential));
-        showPlan(await getOrCreatePlan(user));
+        const plan = await getOrCreatePlan(user);
+        showPlan(plan);
+        startHistory(user.email, plan);
       } catch (err) {
         console.error('Firebase login/plan lookup failed:', err);
         showPlan('Standard');
@@ -398,6 +581,7 @@
     $('logout').onclick = (e) => {
       e.preventDefault();
       google.accounts.id.disableAutoSelect();
+      stopHistory(); // detach the listener before signing out so it doesn't hit a permission error
       signOut(auth);
       showUser(null);
       $('premium-btn').hidden = false;
