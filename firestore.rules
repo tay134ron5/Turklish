@@ -26,9 +26,10 @@ service cloud.firestore {
           return get(/databases/$(database)/documents/users/$(email)).data.plan == 'Premium';
         }
 
-        // Standard users may only list their 3 most recent entries; Premium users get everything.
-        // (Keep the 3 in sync with STANDARD_HISTORY_LIMIT in public/index.html.)
-        allow list: if isOwner() && (request.query.limit <= 3 || isPremium());
+        // Standard users see their 3 most recent entries; the client fetches 4 (3 + 1) only to detect
+        // whether older entries exist and show the Premium lock. Premium users get everything.
+        // (Keep in sync with STANDARD_HISTORY_LIMIT + 1 in public/index.html.)
+        allow list: if isOwner() && (request.query.limit <= 4 || isPremium());
         allow get: if isOwner() && isPremium();
 
         allow create: if isOwner()

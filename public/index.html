@@ -339,7 +339,7 @@
 
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-    import { getAuth, GoogleAuthProvider, signInWithCredential, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+    import { getAuth, GoogleAuthProvider, signInWithCredential, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
     import {
       getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, collection, query, orderBy, limit, onSnapshot, serverTimestamp,
     } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
@@ -410,7 +410,9 @@
       () => showToast('Çok Yakında!', 'Premium özellikler üzerinde çalışıyoruz.');
 
     // --- Translation history: users/{email}/history ---
-    const STANDARD_HISTORY_LIMIT = 3; // must match firestore.rules
+    // Standard users see 3 entries. We fetch one extra (4) only to know whether older ones exist,
+    // so the lock appears only when something is actually hidden. firestore.rules allows limit <= 4.
+    const STANDARD_HISTORY_LIMIT = 3;
     // Keep in sync with the size limits in firestore.rules
     const MAX_SOURCE_LEN = 5000, MAX_TRANSLATED_LEN = 10000;
     let historyUnsub = null;
@@ -488,7 +490,7 @@
       const isPremium = plan === 'Premium';
       const q = isPremium
         ? query(historyCol(email), orderBy('createdAt', 'desc'))
-        : query(historyCol(email), orderBy('createdAt', 'desc'), limit(STANDARD_HISTORY_LIMIT));
+        : query(historyCol(email), orderBy('createdAt', 'desc'), limit(STANDARD_HISTORY_LIMIT + 1));
       $('history').hidden = false;
 
       let firstSnapshot = true;
@@ -497,17 +499,19 @@
         firstSnapshot = false;
 
         const list = $('history-list');
+        const docs = isPremium ? snap.docs : snap.docs.slice(0, STANDARD_HISTORY_LIMIT);
         if (snap.empty) {
           list.replaceChildren(Object.assign(document.createElement('li'), {
             className: 'history-empty', textContent: 'Henüz çeviri yok. İlk çevirin burada görünecek ✨',
           }));
         } else {
-          list.replaceChildren(...snap.docs.map((d) => renderHistoryItem(d, isPremium)));
-          snap.docs.forEach((d) => seenHistoryIds.add(d.id));
+          list.replaceChildren(...docs.map((d) => renderHistoryItem(d, isPremium)));
+          docs.forEach((d) => seenHistoryIds.add(d.id));
         }
 
-        const atLimit = !isPremium && snap.size >= STANDARD_HISTORY_LIMIT;
-        $('history-lock').hidden = !atLimit;
+        // Lock only when older entries are actually hidden (4+ total), not at exactly 3.
+        const hasHidden = !isPremium && snap.size > STANDARD_HISTORY_LIMIT;
+        $('history-lock').hidden = !hasHidden;
         $('history-count').textContent = isPremium
           ? `${snap.size} çeviri · ★ ${snap.docs.filter((d) => d.data().favorite).length}`
           : `Son ${STANDARD_HISTORY_LIMIT} çeviri`;
@@ -522,18 +526,14 @@
     // --- Google Sign-In (Google Identity Services) ---
     const GOOGLE_CLIENT_ID = '74121149233-1g4tjqf0psol6cs02b97jk2qt1ulo67g.apps.googleusercontent.com';
 
-    // Decodes the ID token payload for display only. It must be verified on the server before it's trusted.
-    const decodeJwt = (token) => {
-      const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-      return JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))));
-    };
-
+    // Takes a Firebase User (or null).
     const showUser = (user) => {
       $('gsi-button').hidden = !!user;
       $('user').hidden = !user;
       if (user) {
-        $('user-pic').src = user.picture;
-        $('user-name').textContent = user.given_name || user.name;
+        if (user.photoURL) $('user-pic').src = user.photoURL;
+        else $('user-pic').removeAttribute('src');
+        $('user-name').textContent = (user.displayName || user.email).split(' ')[0];
       }
     };
 
@@ -553,18 +553,35 @@
       return 'Standard';
     };
 
-    async function handleCredentialResponse(response) {
-      showUser(decodeJwt(response.credential));
+    // Single source of truth for the signed-in state. Fires on page load (restoring a persisted
+    // session after refresh), after Google sign-in, and after sign-out.
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        stopHistory();
+        showUser(null);
+        $('premium-btn').hidden = false;
+        return;
+      }
+      showUser(user);
       showPlan(null);
       try {
-        // Exchange the Google ID token for a Firebase session so Firestore rules can verify the user.
-        const { user } = await signInWithCredential(auth, GoogleAuthProvider.credential(response.credential));
         const plan = await getOrCreatePlan(user);
+        if (auth.currentUser?.uid !== user.uid) return; // signed out / switched while loading
         showPlan(plan);
         startHistory(user.email, plan);
       } catch (err) {
-        console.error('Firebase login/plan lookup failed:', err);
+        console.error('Plan lookup failed:', err);
         showPlan('Standard');
+      }
+    });
+
+    async function handleCredentialResponse(response) {
+      try {
+        // Exchange the Google ID token for a Firebase session; onAuthStateChanged takes it from here.
+        await signInWithCredential(auth, GoogleAuthProvider.credential(response.credential));
+      } catch (err) {
+        console.error('Firebase login failed:', err);
+        showToast('Giriş başarısız', 'Lütfen tekrar deneyin.');
       }
     }
 
@@ -582,9 +599,7 @@
       e.preventDefault();
       google.accounts.id.disableAutoSelect();
       stopHistory(); // detach the listener before signing out so it doesn't hit a permission error
-      signOut(auth);
-      showUser(null);
-      $('premium-btn').hidden = false;
+      signOut(auth); // onAuthStateChanged resets the UI
     };
 
     // Module scripts run deferred, so the GSI library may already be loaded by now.
