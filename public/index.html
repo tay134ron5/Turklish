@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Turklish — Ücretsiz Çeviri Motoru</title>
-  <meta name="description" content="Ücretsiz, limitsiz ve hızlı çeviri motoru. Türkçe, İngilizce, Rusça, Almanca, İspanyolca, Fransızca, Arapça ve Makedonca.">
+  <meta name="description" content="Ücretsiz, limitsiz ve hızlı çeviri motoru. Türkçe, İngilizce, Rusça, Almanca, İspanyolca, Fransızca, Arapça, Makedonca, İtalyanca ve Çince.">
   <style>
     :root {
       --bg: #0b0d12; --panel: #141821; --line: #262c3a; --text: #e8eaf0; --muted: #8b93a7;
@@ -123,6 +123,57 @@
     #result:empty::before { content: "Çeviri burada görünecek..."; color: var(--muted); }
     #result.error { color: #fb7185; border-color: #fb7185; }
 
+    /* "10 Dil Desteği" trigger + language list dialog */
+    .lang-badge {
+      display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; white-space: nowrap;
+      font-size: .85rem; font-weight: 600; color: var(--text);
+      background: rgba(0,180,255,.08); border: 1px solid rgba(0,180,255,.45);
+      box-shadow: 0 0 12px rgba(0,180,255,.2); transition: border-color .2s, box-shadow .2s, transform .15s;
+    }
+    .lang-badge:hover {
+      transform: translateY(-1px); border-color: var(--neon-orange);
+      box-shadow: 0 0 16px rgba(0,180,255,.35), 0 0 22px rgba(255,106,0,.3);
+    }
+    .lang-badge:focus-visible { outline: 2px solid var(--electric); outline-offset: 3px; }
+
+    .lang-modal {
+      width: min(460px, calc(100% - 32px)); padding: 26px; border-radius: 18px; color: var(--text);
+      background: rgba(20,24,33,.62); backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%);
+      border: 1px solid transparent;
+      background-image: linear-gradient(rgba(20,24,33,.72), rgba(20,24,33,.72)), linear-gradient(135deg, var(--electric), var(--neon-orange));
+      background-origin: border-box; background-clip: padding-box, border-box;
+      box-shadow: 0 24px 70px rgba(0,0,0,.55), 0 0 32px rgba(0,180,255,.25), 0 0 44px rgba(255,106,0,.15);
+    }
+    .lang-modal[open] { animation: modal-in .3s ease-out; }
+    .lang-modal::backdrop { background: rgba(5,7,12,.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+    .lang-modal[open]::backdrop { animation: fade-in .3s ease-out; }
+    @keyframes modal-in { from { opacity: 0; transform: translateY(12px) scale(.97); } to { opacity: 1; transform: none; } }
+    @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+    .lang-modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    .lang-modal h2 {
+      margin: 0; font-size: 1.2rem; background: linear-gradient(90deg, var(--electric), var(--neon-orange));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .lang-close {
+      width: 34px; height: 34px; padding: 0; border-radius: 50%; font-size: 1.1rem; line-height: 1;
+      background: rgba(255,255,255,.06); border: 1px solid var(--line);
+    }
+    .lang-close:hover { border-color: var(--neon-orange); }
+    .lang-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .lang-list li {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px;
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.07); transition: border-color .2s, background .2s;
+    }
+    .lang-list li:hover { border-color: rgba(0,180,255,.5); background: rgba(0,180,255,.07); }
+    .lang-list code {
+      flex: none; min-width: 34px; padding: 2px 6px; border-radius: 6px; text-align: center; font-size: .75rem; font-weight: 700;
+      text-transform: uppercase; color: var(--neon-orange); background: rgba(255,106,0,.12);
+    }
+    .lang-list div { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+    .lang-list small { color: var(--muted); font-size: .78rem; }
+    @media (max-width: 400px) { .lang-list { grid-template-columns: 1fr; } }
+    @media (prefers-reduced-motion: reduce) { .lang-modal[open], .lang-modal[open]::backdrop { animation: none; } }
+
     footer { border-top: 1px solid var(--line); padding: 24px 0; color: var(--muted); font-size: .85rem; text-align: center; }
 
     @media (max-width: 860px) {
@@ -147,7 +198,7 @@
         Turklish
       </div>
       <div class="auth">
-        <span class="badge">8 Dil</span>
+        <button type="button" class="lang-badge" id="lang-badge" aria-haspopup="dialog">🌍 10 Dil Desteği</button>
         <button type="button" class="premium-btn" id="premium-btn"><span class="spark" aria-hidden="true">✦</span>Premium'a Geç</button>
         <div id="gsi-button"></div>
         <div class="user" id="user" hidden>
@@ -165,7 +216,7 @@
         <h1>Ücretsiz, Limitsiz ve <em>Hızlı</em> Çeviri.</h1>
         <p class="lead">API ücretlerine son. Metninizi yazın, dili seçin ve saniyeler içinde çevirin.</p>
         <ul class="features">
-          <li>Türkçe, İngilizce, Rusça, Almanca, İspanyolca, Fransızca, Arapça ve Makedonca</li>
+          <li>Türkçe, İngilizce, Rusça, Almanca, İspanyolca, Fransızca, Arapça, Makedonca, İtalyanca ve Çince</li>
           <li>Üyelik veya API anahtarı gerekmez</li>
           <li class="soon">⏳ Premium yakında</li>
         </ul>
@@ -177,12 +228,14 @@
             <option value="en">English</option><option value="tr">Türkçe</option><option value="ru">Русский</option>
             <option value="de">Deutsch</option><option value="es">Español</option><option value="fr">Français</option>
             <option value="ar">العربية</option><option value="mk">Македонски</option>
+            <option value="it">Italiano</option><option value="zh">中文</option>
           </select>
           <span>→</span>
           <select id="target" aria-label="Hedef dil">
             <option value="en">English</option><option value="tr" selected>Türkçe</option><option value="ru">Русский</option>
             <option value="de">Deutsch</option><option value="es">Español</option><option value="fr">Français</option>
             <option value="ar">العربية</option><option value="mk">Македонски</option>
+            <option value="it">Italiano</option><option value="zh">中文</option>
           </select>
         </div>
         <textarea id="text" dir="auto" placeholder="Çevrilecek metni yazın..."></textarea>
@@ -193,6 +246,25 @@
       </section>
     </main>
   </div>
+
+  <dialog class="lang-modal" id="lang-modal" aria-labelledby="lang-modal-title">
+    <div class="lang-modal-head">
+      <h2 id="lang-modal-title">🌍 Desteklenen 10 Dil</h2>
+      <button type="button" class="lang-close" id="lang-close" aria-label="Kapat">✕</button>
+    </div>
+    <ul class="lang-list">
+      <li><code>tr</code><div>Türkçe<small>Türkçe</small></div></li>
+      <li><code>en</code><div>English<small>İngilizce</small></div></li>
+      <li><code>ru</code><div>Русский<small>Rusça</small></div></li>
+      <li><code>de</code><div>Deutsch<small>Almanca</small></div></li>
+      <li><code>es</code><div>Español<small>İspanyolca</small></div></li>
+      <li><code>fr</code><div>Français<small>Fransızca</small></div></li>
+      <li><code>ar</code><div><span dir="rtl">العربية</span><small>Arapça</small></div></li>
+      <li><code>mk</code><div>Македонски<small>Makedonca</small></div></li>
+      <li><code>it</code><div>Italiano<small>İtalyanca</small></div></li>
+      <li><code>zh</code><div>中文<small>Çince</small></div></li>
+    </ul>
+  </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -246,6 +318,12 @@
         $('go').click();
       }
     });
+
+    // --- Language list dialog (native <dialog>: Esc closes it and focus is managed for us) ---
+    const langModal = $('lang-modal');
+    $('lang-badge').onclick = () => langModal.showModal();
+    $('lang-close').onclick = () => langModal.close();
+    langModal.addEventListener('click', (e) => { if (e.target === langModal) langModal.close(); }); // backdrop click
 
     // --- Toast + Premium (placeholder until payments exist) ---
     let toastTimer;
